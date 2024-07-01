@@ -1,13 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/ahgr3y/blog-aggregator/internal/database"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
+
+// Create struct to store config
+type apiConfig struct {
+	DB *database.Queries
+}
 
 func main() {
 
@@ -22,12 +30,36 @@ func main() {
 		log.Fatal("PORT environment variable is not set")
 	}
 
+	// Load database url
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL environment variable is not set")
+	}
+
+	// Open connection to database
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create database queries obj
+	dbQueries := database.New(db)
+
+	// Create config
+	apiCfg := apiConfig{
+		DB: dbQueries,
+	}
+
 	// Create a ServeMux
 	serveMux := http.NewServeMux()
 
 	// Set handler to test server endpoints
 	serveMux.HandleFunc("GET /v1/healthz", handlerCheckReadiness)
 	serveMux.HandleFunc("GET /v1/err", handlerTestErrorResponse)
+
+	// Set handler for managing users
+	serveMux.HandleFunc("POST /v1/users", apiCfg.handlerCreateUser)
+	serveMux.HandleFunc("GET /v1/users", apiCfg.handlerGetUser)
 
 	// Create a Server
 	server := http.Server{
@@ -37,7 +69,7 @@ func main() {
 
 	// Start server
 	fmt.Printf("Starting server on port: %s", port)
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}
