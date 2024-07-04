@@ -59,7 +59,11 @@ func main() {
 
 	// Set handler for managing users
 	serveMux.HandleFunc("POST /v1/users", apiCfg.handlerCreateUser)
-	serveMux.HandleFunc("GET /v1/users", apiCfg.handlerGetUser)
+	serveMux.HandleFunc("GET /v1/users", apiCfg.middlewareAuth(apiCfg.handlerGetUser))
+
+	// Set handler for managing feeds
+	serveMux.HandleFunc("POST /v1/feeds", apiCfg.middlewareAuth(apiCfg.handlerCreateFeed))
+	serveMux.HandleFunc("GET /v1/feeds", apiCfg.handlerGetFeeds)
 
 	// Create a Server
 	server := http.Server{

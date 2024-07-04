@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ahgr3y/blog-aggregator/internal/auth"
 	"github.com/ahgr3y/blog-aggregator/internal/database"
 	"github.com/google/uuid"
 )
@@ -58,21 +57,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-func (cfg *apiConfig) handlerGetUser(w http.ResponseWriter, r *http.Request) {
-
-	apiKey, err := auth.ExtractApiKeyFromRequest(r)
-	if err != nil {
-		log.Printf("Error extracting api key from request: %s", err)
-		respondWithError(w, http.StatusUnauthorized, "Unauthorized: "+err.Error())
-		return
-	}
-
-	user, err := cfg.DB.GetUser(r.Context(), apiKey)
-	if err != nil {
-		log.Printf("Error getting user info: %s", err)
-		respondWithError(w, http.StatusNotFound, "Couldn't get user")
-		return
-	}
+func (cfg *apiConfig) handlerGetUser(w http.ResponseWriter, r *http.Request, u database.User) {
 
 	type respBody struct {
 		ID        uuid.UUID `json:"id"`
@@ -83,10 +68,10 @@ func (cfg *apiConfig) handlerGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Name:      user.Name,
-		ApiKey:    user.ApiKey,
+		ID:        u.ID,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+		Name:      u.Name,
+		ApiKey:    u.ApiKey,
 	})
 }
