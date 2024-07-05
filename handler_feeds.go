@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ahgr3y/blog-aggregator/internal/database"
-	"github.com/google/uuid"
 )
 
 func (cfg apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Request, u database.User) {
@@ -45,22 +44,31 @@ func (cfg apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Request, u
 		return
 	}
 
+	feedFollowID := database.GenerateUUID()
+
+	feedFollowParams := database.CreateFeedFollowParams{
+		ID:        feedFollowID,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+		UserID:    u.ID,
+		FeedID:    feed.ID,
+	}
+
+	feedFollow, err := cfg.DB.CreateFeedFollow(r.Context(), feedFollowParams)
+	if err != nil {
+		log.Printf("Error creating feed follow: %s", err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
 	type respBody struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Name      string    `json:"name"`
-		Url       string    `json:"url"`
-		UserID    uuid.UUID `json:"user_id"`
+		Feed       database.Feed       `json:"feed"`
+		FeedFollow database.FeedFollow `json:"feed_follow"`
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody{
-		ID:        feed.ID,
-		CreatedAt: feed.CreatedAt,
-		UpdatedAt: feed.UpdatedAt,
-		Name:      feed.Name,
-		Url:       feed.Url,
-		UserID:    feed.UserID,
+		Feed:       feed,
+		FeedFollow: feedFollow,
 	})
 }
 

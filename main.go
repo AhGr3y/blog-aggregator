@@ -65,6 +65,11 @@ func main() {
 	serveMux.HandleFunc("POST /v1/feeds", apiCfg.middlewareAuth(apiCfg.handlerCreateFeed))
 	serveMux.HandleFunc("GET /v1/feeds", apiCfg.handlerGetFeeds)
 
+	// Set handler for managing feed follows
+	serveMux.HandleFunc("POST /v1/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerCreateFeedFollow))
+	serveMux.HandleFunc("DELETE /v1/feed_follows/{feedFollowID}", apiCfg.middlewareAuth(apiCfg.handlerDeleteFeedByID))
+	serveMux.HandleFunc("GET /v1/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerGetFeedFollowsByUserID))
+
 	// Create a Server
 	server := http.Server{
 		Addr:    ":" + port,
