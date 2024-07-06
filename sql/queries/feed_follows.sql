@@ -5,7 +5,7 @@ RETURNING *;
 
 -- name: DeleteFeedFollowByID :exec
 DELETE FROM feed_follows
-WHERE id = $1;
+WHERE id = $1 AND user_id = $2;
 
 -- name: GetFeedFollowByID :one
 SELECT * FROM feed_follows

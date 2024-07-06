@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ahgr3y/blog-aggregator/internal/database"
-	"github.com/google/uuid"
 )
 
 func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +29,7 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	currentTime := time.Now().UTC()
 
 	// Save user to database
-	_, err = cfg.DB.CreateUser(r.Context(), database.CreateUserParams{
+	user, err := cfg.DB.CreateUser(r.Context(), database.CreateUserParams{
 		ID:        id,
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
@@ -42,36 +41,10 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	type responseBody struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Name      string    `json:"name"`
-	}
-
-	respondWithJSON(w, http.StatusOK, responseBody{
-		ID:        id,
-		CreatedAt: currentTime,
-		UpdatedAt: currentTime,
-		Name:      params.Name,
-	})
+	respondWithJSON(w, http.StatusOK, databaseUsertoUser(user))
 }
 
 func (cfg *apiConfig) handlerGetUser(w http.ResponseWriter, r *http.Request, u database.User) {
 
-	type respBody struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Name      string    `json:"name"`
-		ApiKey    string    `json:"api_key"`
-	}
-
-	respondWithJSON(w, http.StatusOK, respBody{
-		ID:        u.ID,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
-		Name:      u.Name,
-		ApiKey:    u.ApiKey,
-	})
+	respondWithJSON(w, http.StatusOK, databaseUsertoUser(u))
 }

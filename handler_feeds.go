@@ -28,16 +28,14 @@ func (cfg apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Request, u
 
 	feedID := database.GenerateUUID()
 
-	feedParams := database.CreateFeedParams{
+	dbFeed, err := cfg.DB.CreateFeed(r.Context(), database.CreateFeedParams{
 		ID:        feedID,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		Name:      params.Name,
 		Url:       params.Url,
 		UserID:    u.ID,
-	}
-
-	feed, err := cfg.DB.CreateFeed(r.Context(), feedParams)
+	})
 	if err != nil {
 		log.Printf("Error creating feed: %s", err)
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
@@ -46,15 +44,13 @@ func (cfg apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Request, u
 
 	feedFollowID := database.GenerateUUID()
 
-	feedFollowParams := database.CreateFeedFollowParams{
+	dbFeedFollow, err := cfg.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
 		ID:        feedFollowID,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		UserID:    u.ID,
-		FeedID:    feed.ID,
-	}
-
-	feedFollow, err := cfg.DB.CreateFeedFollow(r.Context(), feedFollowParams)
+		FeedID:    dbFeed.ID,
+	})
 	if err != nil {
 		log.Printf("Error creating feed follow: %s", err)
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
@@ -62,13 +58,13 @@ func (cfg apiConfig) handlerCreateFeed(w http.ResponseWriter, r *http.Request, u
 	}
 
 	type respBody struct {
-		Feed       database.Feed       `json:"feed"`
-		FeedFollow database.FeedFollow `json:"feed_follow"`
+		Feed       Feed       `json:"feed"`
+		FeedFollow FeedFollow `json:"feed_follow"`
 	}
 
 	respondWithJSON(w, http.StatusOK, respBody{
-		Feed:       feed,
-		FeedFollow: feedFollow,
+		Feed:       databaseFeedToFeed(dbFeed),
+		FeedFollow: databaseFeedFollowToFeedFollow(dbFeedFollow),
 	})
 }
 
@@ -81,8 +77,5 @@ func (cfg apiConfig) handlerGetFeeds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	feeds := []database.Feed{}
-	feeds = append(feeds, dbFeeds...)
-
-	respondWithJSON(w, http.StatusOK, feeds)
+	respondWithJSON(w, http.StatusOK, databaseFeedstoFeeds(dbFeeds))
 }

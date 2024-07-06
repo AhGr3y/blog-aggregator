@@ -35,38 +35,22 @@ func (cfg apiConfig) handlerCreateFeedFollow(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	feedID := database.GenerateUUID()
+	feedFollowID := database.GenerateUUID()
 
-	feedFollowParams := database.CreateFeedFollowParams{
-		ID:        feedID,
+	dbFeedFollow, err := cfg.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
+		ID:        feedFollowID,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		UserID:    u.ID,
 		FeedID:    params.FeedID,
-	}
-
-	feedFollow, err := cfg.DB.CreateFeedFollow(r.Context(), feedFollowParams)
+	})
 	if err != nil {
 		log.Printf("Error creating feed follow: %s", err)
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
 		return
 	}
 
-	type respBody struct {
-		ID        uuid.UUID `json:"id"`
-		FeedID    uuid.UUID `json:"feed_id"`
-		UserID    uuid.UUID `json:"user_id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-	}
-
-	respondWithJSON(w, http.StatusOK, respBody{
-		ID:        feedFollow.ID,
-		FeedID:    feedFollow.FeedID,
-		UserID:    feedFollow.UserID,
-		CreatedAt: feedFollow.CreatedAt,
-		UpdatedAt: feedFollow.UpdatedAt,
-	})
+	respondWithJSON(w, http.StatusOK, databaseFeedFollowToFeedFollow(dbFeedFollow))
 }
 
 // handlerDeleteFeedByID -
@@ -89,14 +73,23 @@ func (cfg apiConfig) handlerDeleteFeedByID(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Check if feedFollowID exist
-	_, err = cfg.DB.GetFeedFollowByID(r.Context(), feedFollowID)
+	feedFollow, err := cfg.DB.GetFeedFollowByID(r.Context(), feedFollowID)
 	if err != nil {
 		log.Printf("Error getting feed follow: %s", err)
 		respondWithError(w, http.StatusBadRequest, "Feed follow does not exist")
 		return
 	}
 
-	err = cfg.DB.DeleteFeedFollowByID(r.Context(), feedFollowID)
+	// Only able to delete feed follows of authenticated user
+	if feedFollow.UserID != u.ID {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	err = cfg.DB.DeleteFeedFollowByID(r.Context(), database.DeleteFeedFollowByIDParams{
+		ID:     feedFollowID,
+		UserID: u.ID,
+	})
 	if err != nil {
 		log.Printf("Error deleting feed follow: %s", err)
 		respondWithError(w, http.StatusBadRequest, "Unable to delete feed follow")
@@ -116,8 +109,5 @@ func (cfg apiConfig) handlerGetFeedFollowsByUserID(w http.ResponseWriter, r *htt
 		return
 	}
 
-	feedFollows := []database.FeedFollow{}
-	feedFollows = append(feedFollows, dbFeedFollows...)
-
-	respondWithJSON(w, http.StatusOK, feedFollows)
+	respondWithJSON(w, http.StatusOK, databaseFeedFollowsToFeedFollows(dbFeedFollows))
 }
