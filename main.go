@@ -70,11 +70,17 @@ func main() {
 	serveMux.HandleFunc("DELETE /v1/feed_follows/{feedFollowID}", apiCfg.middlewareAuth(apiCfg.handlerDeleteFeedByID))
 	serveMux.HandleFunc("GET /v1/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerGetFeedFollowsByUserID))
 
+	// Set handler for managing posts
+	serveMux.HandleFunc("GET /v1/posts", apiCfg.middlewareAuth(apiCfg.handlerGetPostsByUser))
+
 	// Create a Server
 	server := http.Server{
 		Addr:    ":" + port,
 		Handler: serveMux,
 	}
+
+	// Start scraper
+	go startScraper(apiCfg.DB)
 
 	// Start server
 	fmt.Printf("Starting server on port: %s", port)
